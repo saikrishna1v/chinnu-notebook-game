@@ -4,195 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flash Game</title>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preload" href="https://unpkg.com/@ruffle-rs/ruffle" as="script">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #000;
-        }
-        #game-container {
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-        #player {
-            width: 800px;
-            height: 600px;
-            max-width: 95vw;
-            max-height: 95vh;
-        }
-        #loading {
-            color: #fff;
-            font-family: Arial, sans-serif;
-            font-size: 20px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-        .spinner {
-            border: 4px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top: 4px solid #fff;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        #error {
-            display: none;
-            color: #ff6b6b;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-        #error button {
-            margin-top: 15px;
-            padding: 10px 30px;
-            font-size: 16px;
-            background: #fff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+        * { margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        #game-container { width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        #player { width: 800px; height: 600px; max-width: 95vw; max-height: 95vh; }
+        #loading { color: #fff; font: 20px Arial; }
     </style>
 </head>
 <body>
     <div id="game-container">
-        <div id="loading">
-            <div class="spinner"></div>
-            <div>Loading game...</div>
-        </div>
-        <div id="error">
-            <h2>⚠️ Game failed to load</h2>
-            <p>Please check your connection and try again</p>
-            <button onclick="location.reload()">🔄 Retry</button>
-        </div>
+        <div id="loading">Loading game...</div>
         <div id="player"></div>
     </div>
     
-    <script src="https://unpkg.com/@ruffle-rs/ruffle" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
     <script>
-        let loadTimeout;
-        let retryCount = 0;
-        const maxRetries = 3;
-        
-        function showError() {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('error').style.display = 'block';
-        }
-        
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
+        window.RufflePlayer = window.RufflePlayer || {};
         
         function loadGame() {
-            // Set timeout for loading (10 seconds)
-            loadTimeout = setTimeout(() => {
-                if (retryCount < maxRetries) {
-                    retryCount++;
-                    console.log(`Retry attempt ${retryCount}/${maxRetries}`);
-                    loadGame();
-                } else {
-                    showError();
-                }
-            }, 10000);
-            
             try {
-                window.RufflePlayer = window.RufflePlayer || {};
-                
                 const ruffle = window.RufflePlayer.newest();
                 const player = ruffle.createPlayer();
                 const container = document.getElementById("player");
-                
-                // Clear container
-                container.innerHTML = '';
                 container.appendChild(player);
                 
-                // Configure player
-                const config = {
-                    autoplay: "on",
-                    unmuteOverlay: "hidden",
-                    backgroundColor: "#000000",
-                    letterbox: "on",
-                    splashScreen: false,
-                    preloader: false,
-                    showSwfDownload: false,
-                    contextMenu: "off",
-                    warnOnUnsupportedContent: false,
-                    logLevel: "error",
-                    maxExecutionDuration: 30,
-                    base: window.location.href,
-                    quality: "high",
-                    scale: "showAll",
-                    allowNetworking: "all",
-                    allowScriptAccess: "always"
-                };
-                
-                // Load SWF with error handling
                 player.load({
                     url: "game.swf",
-                    ...config
-                }).then(() => {
-                    clearTimeout(loadTimeout);
-                    hideLoading();
-                    console.log("Game loaded successfully");
-                }).catch((error) => {
-                    console.error("Load error:", error);
-                    clearTimeout(loadTimeout);
-                    if (retryCount < maxRetries) {
-                        retryCount++;
-                        setTimeout(loadGame, 1000);
-                    } else {
-                        showError();
-                    }
+                    autoplay: "on",
+                    splashScreen: false,
+                    preloader: false,
+                    unmuteOverlay: "hidden",
+                    backgroundColor: "#000000"
                 });
                 
-                // Backup: Hide loading after player starts
-                player.addEventListener('loadeddata', () => {
-                    clearTimeout(loadTimeout);
-                    hideLoading();
-                });
-                
-            } catch (error) {
-                console.error("Initialization error:", error);
-                clearTimeout(loadTimeout);
-                if (retryCount < maxRetries) {
-                    retryCount++;
-                    setTimeout(loadGame, 1000);
-                } else {
-                    showError();
-                }
+                document.getElementById("loading").style.display = "none";
+            } catch (e) {
+                console.error(e);
+                setTimeout(loadGame, 500);
             }
         }
         
-        // Start loading when page is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadGame);
-        } else {
+        if (window.RufflePlayer?.newest) {
             loadGame();
+        } else {
+            window.addEventListener("load", loadGame);
         }
-        
-        // Preload the SWF file
-        const preloadLink = document.createElement('link');
-        preloadLink.rel = 'preload';
-        preloadLink.as = 'fetch';
-        preloadLink.href = 'game.swf';
-        preloadLink.crossOrigin = 'anonymous';
-        document.head.appendChild(preloadLink);
     </script>
 </body>
 </html>
